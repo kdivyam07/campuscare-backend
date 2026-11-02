@@ -12,12 +12,15 @@ async function main() {
   process.env.MONGODB_URI = database.getUri('campuscare_demo');
   let server;
   try {
-    server = await start();
+    server = await start({ handleSignals: false });
     await User.init();
     await User.create({ name: 'Demo Maintenance Staff', email: 'staff@campus.edu', password: await bcrypt.hash('StaffDemo123!', 12), role: 'staff' });
     console.log('TEMPORARY DEMO: data is deleted when this process stops.');
     console.log('Staff login: staff@campus.edu / StaffDemo123!');
+    let stopping = false;
     const cleanup = async () => {
+      if (stopping) return;
+      stopping = true;
       if (server.listening) await new Promise(resolve => server.close(resolve));
       await mongoose.disconnect();
       await database.stop();
@@ -32,7 +35,9 @@ async function main() {
     throw error;
   }
 }
-main().catch(() => {
-  console.error('Demo startup failed. Check the MongoDB binary download/network, or configure Atlas and run npm start.');
+main().catch(error => {
+  console.error(error.code === 'EADDRINUSE'
+    ? 'Demo startup failed: port already in use. Stop the previous server or choose another PORT.'
+    : 'Demo startup failed. Check the MongoDB binary download/network, or configure Atlas and run npm start.');
   process.exitCode = 1;
 });

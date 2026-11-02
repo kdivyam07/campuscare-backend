@@ -125,3 +125,36 @@ test('health, malformed JSON, unknown routes, and deleted-account tokens', async
   await user.deleteOne();
   await request(app).get('/api/auth/me').set(auth(otherToken)).expect(401);
 });
+
+test('browser home opens API docs; JSON clients and Postman download still work', async () => {
+  const home = await request(app).get('/').set('Accept', 'text/html').expect(302);
+  assert.equal(home.headers.location, '/docs/');
+  const json = await request(app).get('/').set('Accept', 'application/json').expect(200);
+  assert.equal(json.body.docs, '/docs/');
+  await request(app).get('/docs/').expect('Content-Type', /html/).expect(200);
+  const spec = await request(app).get('/api/openapi.json').expect(200);
+  assert.equal(spec.body.openapi, '3.0.3');
+  assert.ok(spec.body.paths['/api/complaints/{id}/status'].patch);
+  await request(app).get('/docs/swagger-ui-init.js').expect(200);
+  await request(app).get('/postman/CampusCare.postman_collection.json').expect('Content-Disposition', /attachment/).expect(200);
+});
+
+test('startup rejects an occupied port instead of returning a non-listening server', async () => {
+  const net = require('node:net');
+  const start = require('../src/server');
+  const blocker = net.createServer();
+  await new Promise(resolve => blocker.listen(0, resolve));
+  const previousPort = process.env.PORT;
+  const previousUri = process.env.MONGODB_URI;
+  process.env.PORT = String(blocker.address().port);
+  process.env.MONGODB_URI = database.getUri('campuscare_test');
+  try {
+    await assert.rejects(start({ handleSignals: false }), { code: 'EADDRINUSE' });
+  } finally {
+    await new Promise(resolve => blocker.close(resolve));
+    if (previousPort === undefined) delete process.env.PORT;
+    else process.env.PORT = previousPort;
+    if (previousUri === undefined) delete process.env.MONGODB_URI;
+    else process.env.MONGODB_URI = previousUri;
+  }
+});

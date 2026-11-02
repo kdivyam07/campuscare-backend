@@ -27,6 +27,8 @@ Demo mode starts a real temporary MongoDB process and creates a staff account:
 
 The first demo/test run downloads a MongoDB binary and needs internet access. **Demo data is deleted when the process stops.** These credentials exist only in the temporary demo database. Use Atlas for the assignment's persistent database and choose your own staff password. Stop the server with Ctrl+C before changing modes. `npm ci --omit=dev` supports Atlas mode only; demo and tests require development dependencies.
 
+Open `http://localhost:5000/` for interactive API documentation. Expand an endpoint, choose **Try it out**, and execute it from the browser. Register/log in, copy the response token, and paste it into **Authorize** to use protected endpoints. This is a backend API explorer; the assignment's Postman workflow remains available. JSON clients can request the home endpoint with `Accept: application/json`. The OpenAPI specification is at `/api/openapi.json`.
+
 ## 2. Set up MongoDB Atlas
 
 1. Sign in to [MongoDB Atlas](https://cloud.mongodb.com/) and create a project and cluster. Select a free option if available and review the selection before creating it.
@@ -149,7 +151,7 @@ npm test
 
 Tests use an isolated temporary MongoDB, never your Atlas database. They exercise registration/login, hashed passwords, invalid/expired tokens, student ownership, staff permissions, input validation, filters, pending-only edits/deletes, and the full resolution workflow. The initial MongoDB binary download requires internet.
 
-Verified on Node.js 24: all **8 integration tests passed**. The checked-in Postman collection also ran against the demo server using Newman: **16 requests, 32 assertions, 0 failures**. To repeat that collection check while the server is running:
+Verified on Node.js 24: all **10 integration tests passed**. The checked-in Postman collection also ran against the demo server using Newman: **16 requests, 32 assertions, 0 failures**. To repeat that collection check while the server is running:
 
 ```powershell
 npm exec --yes --package newman -- newman run postman/CampusCare.postman_collection.json
