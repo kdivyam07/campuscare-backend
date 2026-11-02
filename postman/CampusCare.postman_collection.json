@@ -1,0 +1,635 @@
+{
+  "info": {
+    "name": "CampusCare — College Maintenance Complaint API",
+    "description": "Run requests in order with the server running. Student email/password are generated for each collection run. Demo staff credentials work with npm run demo; change staff variables for Atlas. The temporary demo database is deleted on shutdown.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "studentEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "studentPassword",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "staffEmail",
+      "value": "staff@campus.edu",
+      "type": "string"
+    },
+    {
+      "key": "staffPassword",
+      "value": "StaffDemo123!",
+      "type": "string"
+    },
+    {
+      "key": "studentToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "staffToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "complaintId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "withdrawId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 — Health check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Successful JSON response', () => pm.expect(pm.response.json().success).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 — Register student",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/auth/register",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Demo Student\",\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"{{studentPassword}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('studentEmail', 'student-' + pm.variables.replaceIn('{{$guid}}') + '@campus.edu');",
+              "pm.collectionVariables.set('studentPassword', pm.variables.replaceIn('{{$guid}}') + 'Aa1!');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('Successful JSON response', () => pm.expect(pm.response.json().success).to.eql(true));",
+              "if (pm.response.code < 300) pm.collectionVariables.set('studentToken', pm.response.json().token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 — Student login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"{{studentPassword}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Successful JSON response', () => pm.expect(pm.response.json().success).to.eql(true));",
+              "if (pm.response.code < 300) pm.collectionVariables.set('studentToken', pm.response.json().token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 — Current account",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/auth/me"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Successful JSON response', () => pm.expect(pm.response.json().success).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 — Submit broken fan",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/complaints",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Broken classroom fan\",\n  \"description\": \"The fan above the front row does not rotate.\",\n  \"category\": \"Electrical\",\n  \"location\": \"Block A, Room 203\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('Successful JSON response', () => pm.expect(pm.response.json().success).to.eql(true));",
+              "if (pm.response.code < 300) pm.collectionVariables.set('complaintId', pm.response.json().complaint._id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 — View my complaints",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/complaints"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Successful JSON response', () => pm.expect(pm.response.json().success).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 — Read complaint",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/complaints/{{complaintId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Successful JSON response', () => pm.expect(pm.response.json().success).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 — Edit pending complaint",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/complaints/{{complaintId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"description\": \"Fan does not rotate even at maximum regulator setting.\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Successful JSON response', () => pm.expect(pm.response.json().success).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 — Staff login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{staffEmail}}\",\n  \"password\": \"{{staffPassword}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Successful JSON response', () => pm.expect(pm.response.json().success).to.eql(true));",
+              "if (pm.response.code < 300) pm.collectionVariables.set('staffToken', pm.response.json().token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 — Staff views all complaints",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{staffToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/complaints"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Successful JSON response', () => pm.expect(pm.response.json().success).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 — Mark In Progress",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{staffToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/complaints/{{complaintId}}/status",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"In Progress\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Successful JSON response', () => pm.expect(pm.response.json().success).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 — Mark Resolved",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{staffToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/complaints/{{complaintId}}/status",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"Resolved\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Successful JSON response', () => pm.expect(pm.response.json().success).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 — Student verifies resolution",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/complaints/{{complaintId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Successful JSON response', () => pm.expect(pm.response.json().success).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 — Filter resolved complaints",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{staffToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/complaints?status=Resolved&category=Electrical&page=1&limit=10"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Successful JSON response', () => pm.expect(pm.response.json().success).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 — Submit complaint to withdraw",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/complaints",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Duplicate fan complaint\",\n  \"description\": \"The fan above the front row does not rotate.\",\n  \"category\": \"Electrical\",\n  \"location\": \"Block A, Room 203\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('Successful JSON response', () => pm.expect(pm.response.json().success).to.eql(true));",
+              "if (pm.response.code < 300) pm.collectionVariables.set('withdrawId', pm.response.json().complaint._id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 — Withdraw pending complaint",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/api/complaints/{{withdrawId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Successful JSON response', () => pm.expect(pm.response.json().success).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
